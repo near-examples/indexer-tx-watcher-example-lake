@@ -6,7 +6,10 @@ use clap::Clap;
 use tokio::sync::mpsc;
 use tracing::info;
 
-use configs::{init_logging, Opts, SubCommand};
+use near_lake_framework::near_indexer_primitives;
+use near_lake_framework::LakeConfig;
+
+use configs::{init_logging, Opts};
 
 mod configs;
 
@@ -15,60 +18,34 @@ mod configs;
 /// We want to catch all *successfull* transactions sent to one of the accounts from the list.
 /// In the demo we'll just look for them and log them but it might and probably should be extended based on your needs.
 
-fn main() {
-    // We use it to automatically search the for root certificates to perform HTTPS calls
-    // (sending telemetry and downloading genesis)
-    openssl_probe::init_ssl_cert_env_vars();
+#[tokio::main]
+async fn main() -> Result<(), tokio::io::Error> {
     init_logging();
 
     let opts: Opts = Opts::parse();
 
-    let home_dir = opts.home_dir.unwrap_or_else(near_indexer::get_default_home);
+    let config: LakeConfig = opts.clone().into();
 
-    match opts.subcmd {
-        SubCommand::Run(args) => {
-            // Create the Vec of AccountId from the provided ``--accounts`` to pass it to `listen_blocks`
-            let watching_list = args
-                .accounts
-                .split(',')
-                .map(|elem| {
-                    near_indexer::near_primitives::types::AccountId::from_str(elem)
-                        .expect("AccountId is invalid")
-                })
-                .collect();
+    let stream = near_lake_framework::streamer(config);
 
-            // Inform about indexer is being started and what accounts we're watching for
-            eprintln!(
-                "Starting indexer transaction watcher for accounts: \n {:#?}",
-                &args.accounts
-            );
+    let watching_list = opts
+        .accounts
+        .split(',')
+        .map(|elem| {
+            near_indexer_primitives::types::AccountId::from_str(elem).expect("AccountId is invalid")
+        })
+        .collect();
 
-            // Instantiate IndexerConfig with hardcoded parameters
-            let indexer_config = near_indexer::IndexerConfig {
-                home_dir,
-                sync_mode: near_indexer::SyncModeEnum::FromInterruption,
-                await_for_node_synced: near_indexer::AwaitForNodeSyncedEnum::WaitForFullSync,
-            };
+    listen_blocks(stream, watching_list).await;
 
-            // Boilerplate code to start the indexer itself
-            let sys = actix::System::new();
-            sys.block_on(async move {
-                eprintln!("Actix");
-                let indexer = near_indexer::Indexer::new(indexer_config);
-                let stream = indexer.streamer();
-                actix::spawn(listen_blocks(stream, watching_list));
-            });
-            sys.run().unwrap();
-        }
-        SubCommand::Init(config) => near_indexer::indexer_init_configs(&home_dir, config.into()),
-    }
+    Ok(())
 }
 
 /// The main listener function the will be reading the stream of blocks `StreamerMessage`
 /// and perform necessary checks
 async fn listen_blocks(
-    mut stream: mpsc::Receiver<near_indexer::StreamerMessage>,
-    watching_list: Vec<near_indexer::near_primitives::types::AccountId>,
+    mut stream: mpsc::Receiver<near_indexer_primitives::StreamerMessage>,
+    watching_list: Vec<near_indexer_primitives::types::AccountId>,
 ) {
     eprintln!("listen_blocks");
     // This will be a map of correspondence between transactions and receipts
@@ -120,7 +97,7 @@ async fn listen_blocks(
                         &execution_outcome.receipt.receiver_id,
                         execution_outcome.execution_outcome.outcome.status
                     );
-                    if let near_indexer::near_primitives::views::ReceiptEnumView::Action {
+                    if let near_indexer_primitives::views::ReceiptEnumView::Action {
                         signer_id,
                         ..
                     } = &execution_outcome.receipt.receipt
@@ -128,19 +105,20 @@ async fn listen_blocks(
                         eprintln!("{}", signer_id);
                     }
 
-                    if let near_indexer::near_primitives::views::ReceiptEnumView::Action {
-                        actions,
-                        ..
+                    if let near_indexer_primitives::views::ReceiptEnumView::Action {
+                        actions, ..
                     } = execution_outcome.receipt.receipt
                     {
                         for action in actions.iter() {
-                            if let near_indexer::near_primitives::views::ActionView::FunctionCall {
+                            if let near_indexer_primitives::views::ActionView::FunctionCall {
                                 args,
                                 ..
                             } = action
                             {
                                 if let Ok(decoded_args) = base64::decode(args) {
-                                    if let Ok(args_json) = serde_json::from_slice::<serde_json::Value>(&decoded_args) {
+                                    if let Ok(args_json) =
+                                        serde_json::from_slice::<serde_json::Value>(&decoded_args)
+                                    {
                                         eprintln!("{:#?}", args_json);
                                     }
                                 }
@@ -156,8 +134,8 @@ async fn listen_blocks(
 }
 
 fn is_tx_receiver_watched(
-    tx: &near_indexer::IndexerTransactionWithOutcome,
-    watching_list: &[near_indexer::near_primitives::types::AccountId],
+    tx: &near_indexer_primitives::IndexerTransactionWithOutcome,
+    watching_list: &[near_indexer_primitives::types::AccountId],
 ) -> bool {
     watching_list.contains(&tx.transaction.receiver_id)
 }
