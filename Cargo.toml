@@ -16,4 +16,4 @@ tokio-stream = { version = "0.1" }
 tracing = "0.1.13"
 tracing-subscriber = "0.2.4"
 
-near-lake-framework = { git = "https://github.com/near/near-lake-framework" }
+near-lake-framework = "0.2.0"
