@@ -1,0 +1,24 @@
+name: CI
+on:
+  repository_dispatch:
+    types: [tests-report]
+  push:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUST_BACKTRACE: 1
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable-2020-10-08
+          target: wasm32-unknown-unknown
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
