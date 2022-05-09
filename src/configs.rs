@@ -41,7 +41,7 @@ impl From<Opts> for near_lake_framework::LakeConfig {
 
         near_lake_framework::LakeConfig {
             s3_endpoint: None,
-            s3_region_name: "eu-central1".to_string(),
+            s3_region_name: "eu-central-1".to_string(),
             start_block_height: opts.block_height,
             s3_bucket_name,
         }
