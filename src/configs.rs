@@ -1,10 +1,10 @@
-use clap::Clap;
+use clap::Parser;
 
 use tracing_subscriber::EnvFilter;
 
 /// NEAR Indexer Example
 /// Watches for stream of blocks from the chain
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 #[clap(version = "0.1", author = "Near Inc. <hello@nearprotocol.com>")]
 pub(crate) struct Opts {
     /// block height to start indexing from
@@ -17,7 +17,7 @@ pub(crate) struct Opts {
     pub subcmd: SubCommand,
 }
 
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub(crate) enum SubCommand {
     Mainnet,
     Testnet,
@@ -33,17 +33,18 @@ pub(crate) fn init_logging() {
 
 impl From<Opts> for near_lake_framework::LakeConfig {
     fn from(opts: Opts) -> Self {
-        let s3_bucket_name: String = match &opts.subcmd {
-            SubCommand::Mainnet => "near-lake-data-mainnet",
-            SubCommand::Testnet => "near-lake-data-testnet",
-        }
-        .into();
+        let mut lake_config =
+            near_lake_framework::LakeConfigBuilder::default().start_block_height(opts.block_height);
 
-        near_lake_framework::LakeConfig {
-            s3_endpoint: None,
-            s3_region_name: "eu-central-1".to_string(),
-            start_block_height: opts.block_height,
-            s3_bucket_name,
-        }
+        match &opts.subcmd {
+            SubCommand::Mainnet => {
+                lake_config = lake_config.mainnet();
+            }
+            SubCommand::Testnet => {
+                lake_config = lake_config.testnet();
+            }
+        };
+
+        lake_config.build().expect("Failed to build LakeConfig")
     }
 }
