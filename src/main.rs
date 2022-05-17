@@ -26,7 +26,7 @@ async fn main() -> Result<(), tokio::io::Error> {
 
     let config: LakeConfig = opts.clone().into();
 
-    let stream = near_lake_framework::streamer(config);
+    let (_, stream) = near_lake_framework::streamer(config);
 
     let watching_list = opts
         .accounts
