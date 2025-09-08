@@ -38,7 +38,7 @@ $ cd indexer-tx-watcher-example
 
 ```bash
 $ cargo build --release
-$ ./target/release/indexer-tx-watcher-example --accounts mycoolcontract.near,myanothercoolcontract.near --block-height 88088521 testnet
+$ ./target/release/indexer-tx-watcher-example --accounts mycoolcontract.near,myanothercoolcontract.near --block-height 213547494 testnet
 ```
 
 Provide your contracts list after `--accounts` key separated with comma (`,`) **avoid spaces**, pick a fresher block height on https://explorer.testnet.near.org/

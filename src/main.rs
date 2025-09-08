@@ -6,10 +6,10 @@ use clap::Parser;
 use tokio::sync::mpsc;
 use tracing::info;
 
-use near_lake_framework::near_indexer_primitives;
 use near_lake_framework::LakeConfig;
+use near_lake_framework::near_indexer_primitives;
 
-use configs::{init_logging, Opts};
+use configs::{Opts, init_logging};
 
 mod configs;
 
@@ -115,12 +115,10 @@ async fn listen_blocks(
                                 ..
                             } = action
                             {
-                                if let Ok(decoded_args) = base64::decode(args) {
-                                    if let Ok(args_json) =
-                                        serde_json::from_slice::<serde_json::Value>(&decoded_args)
-                                    {
-                                        eprintln!("{:#?}", args_json);
-                                    }
+                                if let Ok(args_json) =
+                                    serde_json::from_slice::<serde_json::Value>(&args)
+                                {
+                                    eprintln!("{:#?}", args_json);
                                 }
                             }
                         }

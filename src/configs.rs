@@ -1,5 +1,4 @@
 use clap::Parser;
-
 use tracing_subscriber::EnvFilter;
 
 /// NEAR Indexer Example
